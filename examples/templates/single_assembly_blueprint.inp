@@ -1,0 +1,174 @@
+% PLACEHOLDER MODEL, for demonstration only.
+% One fuel block of a prismatic HTGR core (one of the 36 x 5 blocks of the
+% core studied in the accompanying paper), with periodic boundary conditions:
+% an infinite lattice of identical blocks, so there is no leakage and k_eff
+% is the block's k_inf. It is here so that the pipeline can be run end to
+% end. Replace it with your own model, keeping the placeholders ba_particles,
+% ba_materials, ba_divs, pbed_filename and burnup_days (written between curly
+% braces in the cards below; do not write curly braces anywhere else in a
+% template, including comments, since the template is filled in with Python's
+% str.format).
+
+set title "Placeholder: single HTGR fuel block (36Hx5 design, CCsxFCs = 42x78)"
+
+particle 29
+fuel         3.5000E-2
+buffer       4.0000E-2
+PyC_in       4.3500E-2
+SiC          4.7000E-2
+PyC_out      5.1000E-2
+graphite
+
+{ba_particles}
+
+% Input files for the particle distributions
+pbed 900 50 "{pbed_filename}"
+
+%% -- SURFACE definition -- %%
+surf 11   hexxprism 0.000 0.000  18.000    0.000  80.000
+surf 22   hexxprism 0.000 0.000  18.000    3.000  77.000
+surf 55   inf       
+
+surf 99 hexxprism 0.000 0.000 18.000 0.000 80.000   % column boundary, full height
+
+%% -- PIN definition -- %%
+pin  UB 
+fill 900 0.635
+graphite  
+
+pin  GG
+graphite
+
+pin  CC
+coolant 0.7
+graphite
+
+%% -- LATTICE definition -- %%
+lat 1000 3 0.0 0.0 25 25 1.95    % reflector block
+GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+ GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+  GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+   GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+    GG GG GG GG GG GG GG GG GG GG GG GG GG CC GG GG CC GG GG CC GG GG GG GG GG
+     GG GG GG GG GG GG GG GG GG GG GG CC GG GG CC GG GG CC GG GG CC GG GG GG GG
+      GG GG GG GG GG GG GG GG GG GG GG GG CC GG GG CC GG GG CC GG GG GG GG GG GG
+       GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG CC GG GG GG GG GG
+        GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG
+         GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG
+          GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG
+           GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG
+            GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG
+             GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG
+              GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG
+               GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG
+                GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG
+                 GG GG GG GG GG CC GG GG GG GG GG GG GG GG CC GG GG GG GG GG GG GG GG GG GG
+                  GG GG GG GG GG GG CC GG GG CC GG GG CC GG GG GG GG GG GG GG GG GG GG GG GG
+                   GG GG GG GG CC GG GG CC GG GG CC GG GG CC GG GG GG GG GG GG GG GG GG GG GG
+                    GG GG GG GG GG CC GG GG CC GG GG CC GG GG GG GG GG GG GG GG GG GG GG GG GG
+                     GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+                      GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+                       GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+                        GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+
+lat 2000 3 0.0 0.0 25 25 1.95    % fuel assembly 
+GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+ GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+  GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+   GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+    GG GG GG GG GG GG GG GG GG GG GG GG GG CC UB UB CC UB UB CC GG GG GG GG GG
+     GG GG GG GG GG GG GG GG GG GG GG CC UB UB CC UB UB CC UB UB CC GG GG GG GG
+      GG GG GG GG GG GG GG GG GG GG UB UB CC UB UB CC UB UB CC UB UB GG GG GG GG
+       GG GG GG GG GG GG GG GG GG UB CC UB GG GG GG GG GG GG UB CC UB GG GG GG GG
+        GG GG GG GG GG GG GG GG CC UB UB GG GG GG GG GG GG GG UB UB CC GG GG GG GG
+         GG GG GG GG GG GG GG UB UB CC GG GG GG GG GG GG GG GG CC UB UB GG GG GG GG
+          GG GG GG GG GG GG UB CC UB GG GG GG GG GG GG GG GG GG UB CC UB GG GG GG GG
+           GG GG GG GG GG CC UB UB GG GG GG GG GG GG GG GG GG GG UB UB CC GG GG GG GG
+            GG GG GG GG GG UB CC GG GG GG GG GG GG GG GG GG GG GG CC UB GG GG GG GG GG
+             GG GG GG GG CC UB UB GG GG GG GG GG GG GG GG GG GG UB UB CC GG GG GG GG GG
+              GG GG GG GG UB CC UB GG GG GG GG GG GG GG GG GG UB CC UB GG GG GG GG GG GG
+               GG GG GG GG UB UB CC GG GG GG GG GG GG GG GG CC UB UB GG GG GG GG GG GG GG
+                GG GG GG GG CC UB UB GG GG GG GG GG GG GG UB UB CC GG GG GG GG GG GG GG GG
+                 GG GG GG GG UB CC UB GG GG GG GG GG GG UB CC UB GG GG GG GG GG GG GG GG GG
+                  GG GG GG GG UB UB CC UB UB CC UB UB CC UB UB GG GG GG GG GG GG GG GG GG GG
+                   GG GG GG GG CC UB UB CC UB UB CC UB UB CC GG GG GG GG GG GG GG GG GG GG GG
+                    GG GG GG GG GG CC UB UB CC UB UB CC GG GG GG GG GG GG GG GG GG GG GG GG GG
+                     GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+                      GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+                       GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+                        GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG GG
+
+cell sa_fuel   3001 fill 2000  -11        % one fuel assembly
+cell sa_graph  3001 reflector  11         % graphite out to the column boundary
+
+lat 7000 9 0.0 0.0 1      % vertical stack
+0.0  3001
+
+%% -- CELL definition for the fuel assemblies -- %%
+cell fuel_assembly          60 fill 2000 -22        
+cell graph_FA               60 fill 1000 -11 22   
+cell void_FA                60 void       11
+
+%% -- CELL definition for graphite filling -- %%
+cell graph       50 graphite  -55
+cell col_fill 0 fill 7000  -99      % the axial stack, clipped to one hex column
+cell col_out  0 outside     99
+
+%% -- MATERIAL DEFINITION -- %%
+
+mat fuel   -13.0 tmp 1200 burn 1 vol 294.1755945 rgb 241 99 101
+92235.83c   0.20
+92238.83c   0.80
+ 6000.83c   1.00
+
+mat buffer -1.0 tmp 800 moder grph 6000 vol 144.9436602 rgb 39 46 56 % dark grey
+6000.81c 1.0
+
+mat PyC_in -1.90 tmp 800 moder grph 6000 vol 125.6490004 rgb 61 84 117 % indaco
+6000.81c 1.0
+
+mat SiC -3.2 tmp 800 vol 147.5860947 rgb 66 103 158 % lighter indaco
+14028.81c 0.500
+ 6000.81c 0.500
+
+mat PyC_out -1.97 tmp 800 moder grph 6000 vol 197.7957793 rgb 61 84 117 % indaco
+6000.81c 1.0
+
+mat graphite -1.8 tmp 800 moder grph 6000 vol 83707.04559 rgb 250 203 157 % light beige
+6000.81c 1.0
+
+mat reflector -1.8 tmp 800 moder grph 6000 rgb 250 203 157 % assembly-edge graphite
+6000.81c 1.0
+
+mat coolant -0.000193 vol 5172.318145 tmp 800 rgb 31 48 237
+2004.81c 1.0
+
+{ba_materials}
+
+therm grph grph.15t
+
+%% -- SET PARAMETERS -- %%
+set bc 3 3 3
+set pop 10000 500 10
+
+div fuel sep 0
+
+{ba_divs}
+
+dep daytot {burnup_days} 
+
+set inventory
+922350
+922380
+641550    %%% IF YOU USE ANOTHER ABSORBER, CHANGE HERE ITS TRACKING
+641570    %%% IF YOU USE ANOTHER ABSORBER, CHANGE HERE ITS TRACKING
+541350
+942390
+
+set declib   "JEFF33-rdd_all.asc.txt"   % looked up in SERPENT_DATA
+set nfylib   "JEFF33-nfy.asc.txt"   % looked up in SERPENT_DATA
+set sfylib   "JEFF33-sfy.asc.txt"   % looked up in SERPENT_DATA
+
+set pcc LELI 10 10
+set opti 4
+set power 0.277777E6

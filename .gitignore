@@ -1,0 +1,11 @@
+*.log
+*.npz
+runs/
+*_local.ipynb
+.vscode/
+*.egg-info
+__pycache__/
+.venv/
+.pytest_cache/
+build/
+dist/

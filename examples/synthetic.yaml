@@ -1,0 +1,36 @@
+# Toy campaign on the analytic model in profilebo/evaluators/synthetic.py:
+# no transport code needed, a full campaign runs in a few minutes.
+# Same structure as config.yaml: y is a reactivity in pcm, t a burnup in days.
+#
+# The model has a known answer: R1 = 0.020, R2 = 0.065, N1 = 300, N2 = 250
+# holds the reactivity flat at 1000 pcm. Expect the campaign to end near it
+# (other designs come close too: hold-down and burn-out trade off).
+
+synthetic:
+  noise: 25.0                        # pcm, 1-sigma noise added to every point
+  bounds:
+    R1: [0.005, 0.035]               # cm, batch-1 particle radius
+    R2: [0.040, 0.090]               # cm, batch-2 particle radius
+    N1: [100, 500]                   # particles, batch 1 (integer)
+    N2: [100, 400]                   # particles, batch 2 (integer)
+
+basis:
+  max_modes: 6
+  target_ratio: 1.0
+
+objective:
+  alpha: 100.0
+  target: 1000.0                     # pcm
+  window: [5.0, 1825.0]              # days
+
+bo:
+  n_init: 8
+  budget: 24
+  seed: 7
+  reproducible: true
+  num_restarts: 4
+  raw_samples: 128
+  mc_samples: 64
+
+paths:
+  run_dir: runs/synthetic

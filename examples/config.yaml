@@ -1,0 +1,103 @@
+serpent:
+  executable: /path_to_executable/sss2
+  template: templates/single_assembly_blueprint.inp   # relative to this file;
+                                     # a placeholder model, see its header
+
+  # Burnable-absorber particle batches. The design parameters are derived
+  # from this list: for batch i, a [lo, hi] radius or count is optimized
+  # (as R<i>, N<i>), a single number is held fixed. One entry = single batch.
+  ba_particles:
+    first_universe: 30               # batch i -> universe 30 + i - 1; must not
+                                     # clash with universes the template defines
+    matrix: graphite                 # template material around the outermost shell
+    n_zones: 20                      # concentric self-shielding shells per particle
+                                     # (default for all batches; override per batch)
+    material:                        # absorber (default for all batches; override per batch)
+      density: -7.4                  # negative = g/cm3 (Serpent convention)
+      temperature: 800               # K
+      composition:                   # nuclide: atomic fraction (here Gd2O3)
+        64155.81c: 0.5
+        64157.81c: 0.5
+        8016.81c: 1.5
+    batches:
+      - radius: [0.010, 0.040]       # cm
+        count: [200, 800]            # particles per fuel channel
+      - radius: [0.041, 0.090]       # cm
+        count: [100, 400]
+
+  burnup_days: [1, 5, 15, 30, 91.25, 182.5, 273.75, 365, 456.25, 547.5,
+                638.75, 730, 821.25, 912.5, 1003.75, 1095, 1186.25, 1277.5,
+                1368.75, 1460, 1551.25, 1642.5, 1733.75, 1825, 1916.25,
+                2007.5, 2098.75, 2190]
+  n_channels: 78                     # fuel channels (UB pins) in the model: 78 in
+                                     # the single block of the placeholder template.
+                                     # Absorber volumes = shell vol x N_particles x this
+  fuel:
+    universe: 29
+    radius: 5.1e-2                   # cm
+    count: 21000                     # TRISO per compact
+  cylinder:                          # fuel-compact channel for sss2 -disperse
+    radius: 0.635                    # cm
+    z_min: 3.0
+    z_max: 77.0
+  disperser:
+    shake_factor: 0.4
+    growth_rate: 0.01
+  slurm:
+    partition: partition   
+    ntasks: 8
+    cpus_per_task: 4
+    mem_per_cpu: 6000M
+    omp_threads: null                # set only after a hybrid recompile of sss2
+    time: "07:00:00"                 
+    account: account   
+    modules: []                      # OpenMPI resolves via RPATH; none needed
+    env_lines:                       # exported inside the job script
+      - export SERPENT_DATA=/DATA
+      - export SERPENT_ACELIB=xsdir.xsdata
+    launcher: srun                   # fallback: mpirun -np $SLURM_NTASKS
+    extra_lines: []                  # any additional #SBATCH directives
+
+    poll_seconds: 60
+    max_attempts: 3                  # retry transient SLURM/node faults
+
+# Trajectory reduction: each simulated trajectory -> n_coeff POD coefficients.
+# The number of modes is chosen after the DoE: the fewest whose truncation
+# error on the DoE trajectories (RMS over the objective window) is at most
+# target_ratio times the statistical sigma of the simulations.
+basis:
+  max_modes: 10                      # upper limit; a warning is logged if it is hit
+  target_ratio: 1.0                  # 1 = truncation error at the noise level
+  # n_coeff: 9                       # uncomment to fix the number of modes instead
+
+# Objective: J = mean_i w_i (y_i - target_i)^2, with w_i = alpha where y_i is
+# below the target and 1 elsewhere. Here y is the core reactivity in pcm and
+# t the burnup in days.
+objective:
+  alpha: 100.0                       # asymmetric penalty for falling below the target
+  target: 1000.0                     # pcm; a number, or a two-column file (t, target)
+  window: [5.0, 1825.0]              # days; J is evaluated only inside this window
+
+bo:
+  n_init: 16                         # LHS design size
+  doe_parallel: 2                    # concurrent DoE jobs
+  budget: 45                         # fresh campaign: 16 DoE + 24 BO
+  seed: 42
+  reproducible: true       
+  num_restarts: 10                   # acqf multistart
+  raw_samples: 512
+  mc_samples: 256                    # posterior samples for composite qLogEI
+  # --- design-resolution floor: stop refining below what can be built or
+  # measured. Resolution = max(manufacturing tolerance, sigma_J / |dJ/dmu|).
+  resolution_floor: true
+  design_tolerance:                  # manufacturing only; absolute units
+    R1: 2.0e-4                       # cm (2 um)
+    R2: 2.0e-4                       # cm
+  statistical_floor: true            # N floors come from sigma_J 
+  tolerance_streak: 3                # stop after 3 consecutive sub-resolution steps
+  noise_stop_factor: 0.1             # or when EI_out < 0.1 * sigma_J
+  acq_threshold: 0.0                 # auto-stop when logEI < 0 (unattended)
+
+paths:
+  run_dir: runs/example
+                 

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "profilebo"
+version = "0.1.0"
+description = "Bayesian optimization of simulated trajectories toward a target profile (POD + GP)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "Nicolò Magro", email = "n.magro@tudelft.nl"}]
+dependencies = [
+    "numpy>=2.4",
+    "scipy>=1.17",
+    "pyyaml>=6.0",
+    "torch>=2.13",
+    "botorch>=0.18",
+]
+
+[project.optional-dependencies]
+plots = ["matplotlib"]
+dev = ["pytest"]
+
+[project.scripts]
+profilebo = "profilebo.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: runs a full BO campaign (seconds to tens of seconds each)"]
