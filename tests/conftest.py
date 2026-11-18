@@ -60,3 +60,15 @@ def write_serpent_case():
         (case_dir / "particles.pbed").write_text("\n".join(rows) + "\n")
         return specs, batches
     return write
+
+
+@pytest.fixture(scope="session")
+def synthetic_campaign(tmp_path_factory, synthetic_config):
+    """A finished small synthetic campaign, shared by the tests that only read
+    it (report, surrogate optimum). Returns (config, best J)."""
+    from profilebo.evaluators.synthetic import SyntheticEvaluator
+    from profilebo.optimization.bo_loop import BOLoop
+
+    cfg = synthetic_config(tmp_path_factory.mktemp("campaign") / "run")
+    _, j_best = BOLoop(cfg, SyntheticEvaluator()).run()
+    return cfg, j_best

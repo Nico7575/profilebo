@@ -13,18 +13,14 @@ from profilebo.cli import main
 from profilebo.config import ObjectiveConfig
 from profilebo.evaluators import AXIS_LABELS
 from profilebo.evaluators.synthetic import SyntheticEvaluator
-from profilebo.optimization.bo_loop import BOLoop
 from profilebo.optimization.scalar_baseline import ScalarBOLoop
 
 LABELS = AXIS_LABELS["synthetic"]
 
 
-@pytest.fixture(scope="module")
-def campaign(tmp_path_factory, synthetic_config):
-    """A finished small synthetic campaign, shared by the tests below."""
-    cfg = synthetic_config(tmp_path_factory.mktemp("report") / "run")
-    _, j_best = BOLoop(cfg, SyntheticEvaluator()).run()
-    return cfg, j_best
+@pytest.fixture
+def campaign(synthetic_campaign):
+    return synthetic_campaign
 
 
 def test_j_and_contributions_match_the_optimizer(campaign):

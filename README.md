@@ -11,10 +11,10 @@ that stays flat, just above a target, over the whole cycle. The optimization
 core is application-agnostic: any simulator that maps design parameters to a
 trajectory with statistical uncertainties can be plugged in.
 
-> **Status (November 2026): work in progress.** The optimization pipeline,
-> the Serpent evaluator, `profilebo run` and `profilebo report` are complete
-> and tested; optimization on the surrogate alone is planned. See
-> [Status](#status).
+> **Status:** version 0.1.0 is complete and working: the whole method of the
+> paper is ported, tested, and checked against the original research code.
+> The reference to the paper, and a DOI for the software, will be added when
+> the paper is published.
 
 ## How it works
 
@@ -30,7 +30,8 @@ trajectory with statistical uncertainties can be plugged in.
    trajectories and scored by the objective, and the next design maximizes
    the Monte-Carlo expected improvement of that composite (qLogEI). The
    objective is therefore post-processing: the same archive of simulations
-   can be re-optimized for a different target without new runs.
+   can be re-optimized for a different target without new runs
+   (`profilebo surrogate`).
 5. **Stopping.** At the evaluation budget, or earlier when proposals keep
    falling below the design resolution (the smallest change that can be
    manufactured or distinguished from noise), or when the expected
@@ -148,7 +149,9 @@ Serpent 2 must be installed, with its nuclear data. The steps:
 1. Copy `examples/config.yaml` and set `serpent.executable` (the `sss2`
    binary) and `serpent.template` (your model; see
    `examples/templates/single_assembly_blueprint.inp` for the placeholders
-   it must contain).
+   it must contain). That example is a single fuel block with periodic
+   boundaries, there to run the pipeline end to end; it is not the
+   full-core model of the paper.
 2. Choose where Serpent runs with `serpent.scheduler`:
    - `slurm`: every case is a SLURM job; fill in `serpent.slurm`
      (partition, account, tasks, time limit, modules, data paths).
@@ -159,7 +162,10 @@ Serpent 2 must be installed, with its nuclear data. The steps:
    that stays alive: inside `tmux` or `screen`, or, on a cluster, as a SLURM
    job of its own with [examples/optimizer.sbatch](examples/optimizer.sbatch)
    (fill in partition, account and paths, then `sbatch optimizer.sbatch`).
-   The optimizer itself needs one core; the cases are the jobs.
+   The optimizer itself needs one core; the cases are the jobs. As a job,
+   it submits the cases from a compute node, which the cluster must allow;
+   put it where it does not take a slot the cases need, and keep
+   `bo.doe_parallel` within what the cluster runs at once for you.
 
 Each case directory `cases/<tag>/` holds the rendered input `case.serp`, the
 particle positions `particles.pbed`, the job script, Serpent's output
@@ -194,8 +200,42 @@ and writes it to `report/summary.txt`, with these figures:
 
 `--gif` adds `convergence.gif`, one frame per evaluation (the initial design
 from worst to best, then the optimization steps). `--show doe_004 bo_017`
-draws those evaluations in the trajectory figure as well, and `--format pdf`
+draws those evaluations in the trajectory figure as well, `--prediction
+FILE.npz` draws a prediction saved by `profilebo surrogate`, and `--format pdf`
 writes the figures as PDF.
+
+## Optimization on the surrogate alone
+
+The surrogate models the trajectory, not `J`, so once a campaign has a
+surrogate (after its initial design), the optimum of any objective can be
+found on it in about a minute, with no new simulation:
+
+```bash
+profilebo surrogate config.yaml                       # the config's own objective
+profilebo surrogate config.yaml --target 500          # another constant target
+profilebo surrogate config.yaml --target profile.txt  # a tabulated target (t, target)
+profilebo surrogate config.yaml --alpha 10 --window 5 2100 --time-weighted
+profilebo surrogate config.yaml --flatness-beta 0 --save predictions/flat.npz
+```
+
+The options replace the objective of the config, and only for this command.
+It prints:
+
+- the best design already simulated, under this objective;
+- the optimum on the surrogate, with its predicted `J` (median and 80%
+  interval of the posterior);
+- its distance to the nearest simulated design;
+- a verdict. Close to the simulated designs with a tight interval, the
+  surrogate's answer is likely final, and a campaign would only confirm it.
+  Otherwise, a campaign for this objective is worth its budget.
+
+It warns when a side of the design box reaches well beyond the simulated
+designs, since an optimum there is extrapolation. With `bo.reproducible`, the
+result is seeded from `bo.seed` and the target, so it can be regenerated
+exactly. `--save` writes the optimum and its predicted trajectory, which
+`profilebo report config.yaml --prediction FILE.npz` draws next to the
+simulated ones. The command only reads the campaign, so it can also run
+while the campaign is running.
 
 ## Command summary
 
@@ -213,7 +253,10 @@ writes the figures as PDF.
 | More detail in the log | `profilebo run config.yaml -v` |
 | Summary and figures (any time) | `profilebo report config.yaml` |
 | ... with an animation, some evaluations highlighted, as PDF | `profilebo report config.yaml --gif --show doe_004 bo_017 --format pdf` |
-| Help | `profilebo --help`, `profilebo run --help`, `profilebo report --help` |
+| Optimum on the surrogate, no simulation | `profilebo surrogate config.yaml` |
+| ... for another objective, saved | `profilebo surrogate config.yaml --target 500 --save pred.npz` |
+| ... drawn in the report | `profilebo report config.yaml --prediction pred.npz` |
+| Help | `profilebo --help`, `profilebo run --help`, `profilebo report --help`, `profilebo surrogate --help` |
 
 On a cluster, keep the optimizer alive after you log out, and follow the jobs
 with the scheduler:
@@ -277,22 +320,6 @@ It should return when the result is available, reuse what is already in
 resumable), and be safe to call from several threads. The full contract is in
 `src/profilebo/evaluators/base.py`.
 
-## Status
-
-| Component | State |
-|---|---|
-| Configuration, POD basis, Gaussian processes, objective, acquisition | ported and tested |
-| BO loop and scalar-objective baseline | ported, tested, and checked against the original research code: identical proposals, step by step |
-| Synthetic evaluator and example | done |
-| Serpent evaluator | ported and checked against the original code: identical inputs for any number of particle batches, identical particle positions for a fixed seed, identical results on 550 Serpent outputs of the paper's campaigns, identical SLURM job scripts, and the same decisions on restart and failure (reuse, re-attach, retry, refuse). Run end to end on a SLURM cluster (DelftBlue): stopped and resumed mid-design, re-attached to the running jobs, and the archive rebuilt identically from the Serpent outputs. New: a local backend for running without a cluster |
-| Command line: `profilebo run` (run, stop, resume; scalar baseline) | done |
-| Report: `profilebo report` (summary and figures, also of a running campaign) | done |
-| Optimization on the surrogate alone | planned |
-
-`examples/templates/single_assembly_blueprint.inp` is a **placeholder** Serpent
-model: a single fuel block with periodic boundaries, provided so that the
-pipeline can be run end to end. It is not the full-core model of the paper.
-
 ## Relation to the paper
 
 The results in the accompanying paper were produced with the original
@@ -308,8 +335,17 @@ original's decisions exactly. The deliberate differences:
   target.
 - The Gaussian-process fit has one more fallback noise level, used only when
   a fit would otherwise fail and stop the campaign.
+- `profilebo surrogate` seeds a tabulated target by the file's name; the
+  original used the path as written. For a constant target the seed, and the
+  result, are the same.
 
 > The code is related to a paper currently under review process in the NSE journal.
+
+## Citation
+
+To cite the software, use [CITATION.cff](CITATION.cff) (on GitHub: "Cite
+this repository"). The reference to the paper will be added once it is
+published.
 
 ## License
 

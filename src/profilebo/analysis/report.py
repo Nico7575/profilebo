@@ -197,7 +197,7 @@ def _phase_colors(c: Campaign) -> list[str]:
     return [MUTED if s else BLUE for s in c.initial]
 
 
-def fig_trajectories(c: Campaign, labels, show=()):
+def fig_trajectories(c: Campaign, labels, show=(), prediction: dict | None = None):
     t_label, y_label, _ = labels
     fig = _figure(figsize=(8.5, 4.4), layout="constrained")
     ax = fig.subplots()
@@ -213,12 +213,20 @@ def fig_trajectories(c: Campaign, labels, show=()):
         ax.plot(c.t, c.y[i], color=EXTRA_COLORS[k % len(EXTRA_COLORS)], lw=1.6,
                 marker="o", ms=3, zorder=3, label=f"{tag}, J = {c.J[i]:.3g}")
         focus.append(c.y[i])
+    if prediction is not None:
+        ax.fill_between(c.t, prediction["y_p10"], prediction["y_p90"], color=MAGENTA,
+                        alpha=0.18, lw=0, zorder=3)
+        ax.plot(c.t, prediction["y"], color=MAGENTA, lw=1.8, ls="--", zorder=3,
+                label=f"surrogate optimum, not simulated: predicted J = "
+                      f"{float(prediction['J_p50']):.3g} (10-90 % band)")
+        focus.append(prediction["y"])
     sig = 2 * c.y_std[b]
     ax.fill_between(c.t, c.y[b] - sig, c.y[b] + sig, color=BLUE, alpha=0.18, lw=0, zorder=4)
     ax.plot(c.t, c.y[b], color=BLUE, lw=2, marker="o", ms=4, zorder=5,
             label=rf"best: {c.tags[b]}, J = {c.J[b]:.3g} ($\pm 2\sigma$ band)")
-    # Scale on the curves that matter; the others may run far off.
-    focus = np.array(focus)
+    # Scale on the curves that matter, inside the window; the others, and
+    # everything outside the window, may run off the frame.
+    focus = np.array(focus)[:, c.window]
     lo, hi = focus.min(), focus.max()
     pad = 0.15 * max(hi - lo, 4 * np.max(c.y_std[b]), 1e-12)
     ax.set_ylim(lo - pad, hi + pad)
@@ -458,9 +466,12 @@ def animate(c: Campaign, labels, path: Path, fps: float = 2.0, trail: int = 6) -
 
 # ----------------------------------------------------------------------
 def write_report(cfg: Config, labels, out_dir: Path | None = None, fmt: str = "png",
-                 show=(), gif: bool = False) -> tuple[str, list[Path]]:
+                 show=(), gif: bool = False, prediction: Path | None = None
+                 ) -> tuple[str, list[Path]]:
     """Write summary.txt and the figures into out_dir (default: the report
-    folder of the run directory). Returns the summary and the files written."""
+    folder of the run directory). Returns the summary and the files written.
+    prediction: a file saved by 'profilebo surrogate --save', drawn in the
+    trajectory figure."""
     try:
         import matplotlib
     except ImportError as exc:
@@ -469,6 +480,12 @@ def write_report(cfg: Config, labels, out_dir: Path | None = None, fmt: str = "p
     c = load_campaign(cfg)
     for tag in show:
         c.index(tag)                      # fail before writing anything
+    pred = None
+    if prediction is not None:
+        from profilebo.optimization.surrogate_optimum import load_prediction
+        pred = load_prediction(prediction)
+        if pred["t"].shape != c.t.shape or not np.allclose(pred["t"], c.t):
+            raise ValueError(f"{prediction} is on another grid than this campaign")
     out = Path(out_dir) if out_dir is not None else cfg.run_dir / "report"
     out.mkdir(parents=True, exist_ok=True)
 
@@ -477,7 +494,7 @@ def write_report(cfg: Config, labels, out_dir: Path | None = None, fmt: str = "p
     written[0].write_text(text + "\n")
     with matplotlib.rc_context(STYLE):
         figs = {
-            "trajectories": fig_trajectories(c, labels, show),
+            "trajectories": fig_trajectories(c, labels, show, pred),
             "convergence": fig_convergence(c, labels),
             "acquisition": fig_acquisition(c, cfg, labels),
             "parameters": fig_parameters(c, cfg),

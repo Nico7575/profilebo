@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "profilebo: Bayesian optimization of simulated trajectories toward a target profile"
+abstract: >-
+  Bayesian optimization of expensive simulations whose output is a trajectory
+  that should follow a target profile: a POD basis of the trajectories, one
+  Gaussian process per coefficient, and a composite Monte-Carlo acquisition on
+  an asymmetric objective. Developed to design burnable-absorber loadings of a
+  prismatic high-temperature gas-cooled reactor with Serpent 2.
+authors:
+  - given-names: "Nicolò"
+    family-names: "Magro"
+    affiliation: "Delft University of Technology"
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/Nico7575/profilebo"
+keywords:
+  - Bayesian optimization
+  - Gaussian processes
+  - proper orthogonal decomposition
+  - nuclear reactor design
+  - burnable absorbers
+  - Serpent
