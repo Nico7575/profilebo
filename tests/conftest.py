@@ -14,7 +14,7 @@ SYNTHETIC_BOUNDS = {"R1": [0.005, 0.035], "R2": [0.040, 0.090],
                     "N1": [100, 500], "N2": [100, 400]}
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")      # a pure factory, so shareable
 def synthetic_config():
     """A small, fast campaign on the synthetic evaluator. Keyword arguments
     override bo settings; basis/objective/parameters can be replaced whole.

@@ -2,6 +2,7 @@
 
     profilebo run CONFIG            run a campaign, or resume it
     profilebo run CONFIG --scalar   the same with the scalar-objective baseline
+    profilebo report CONFIG         summary and figures of a campaign
 """
 
 from __future__ import annotations
@@ -65,6 +66,21 @@ def _run(args) -> None:
              ", ".join(f"{k} = {v:.6g}" for k, v in x_best.items()), j_best)
 
 
+def _report(args) -> None:
+    from profilebo.analysis.report import write_report
+    from profilebo.config import load_config
+    from profilebo.evaluators import AXIS_LABELS
+
+    cfg = load_config(args.config)
+    try:
+        text, written = write_report(cfg, AXIS_LABELS[cfg.evaluator], args.out, args.format,
+                                     args.show, args.gif)
+    except (FileNotFoundError, ValueError, ImportError) as exc:
+        sys.exit(f"profilebo report: {exc}")
+    print(text)
+    print(f"\nwritten to {written[0].parent}: {', '.join(p.name for p in written)}")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(
         prog="profilebo",
@@ -83,6 +99,23 @@ def main(argv=None) -> None:
                           "the trajectory surrogate; give it its own run_dir")
     run.add_argument("-v", "--verbose", action="store_true", help="debug-level logging")
     run.set_defaults(func=_run)
+
+    report = sub.add_parser(
+        "report", help="summary and figures of a campaign",
+        description="Print a summary of the campaign described by CONFIG and write it, "
+                    "with figures, to the report folder of its run directory. It only "
+                    "reads the campaign, so it can run while the campaign is running.")
+    report.add_argument("config", help="the campaign's YAML file")
+    report.add_argument("--out", type=Path, help="folder for the report (default: "
+                        "report/ in the run directory)")
+    report.add_argument("--format", default="png", choices=("png", "pdf", "svg"),
+                        help="figure format (default png)")
+    report.add_argument("--show", nargs="+", default=[], metavar="TAG",
+                        help="also draw these evaluations in the trajectory figure, "
+                             "e.g. --show doe_004 bo_017")
+    report.add_argument("--gif", action="store_true",
+                        help="also write convergence.gif, one frame per evaluation")
+    report.set_defaults(func=_report)
 
     args = parser.parse_args(argv)
     args.func(args)

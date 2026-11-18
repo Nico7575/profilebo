@@ -12,4 +12,12 @@ def make_evaluator(cfg) -> Evaluator:
     raise ValueError(f"unknown evaluator {cfg.evaluator!r}")
 
 
-__all__ = ["Evaluation", "Evaluator", "make_evaluator"]
+# Axis labels for the report, per evaluator: (t, y, J). The optimizer itself
+# never needs units.
+AXIS_LABELS = {
+    "serpent": ("burnup time (days)", "reactivity (pcm)", "J (pcm$^2$)"),
+    "synthetic": ("t (days)", "y (pcm)", "J (pcm$^2$)"),   # mimics a burnup curve
+}
+
+
+__all__ = ["AXIS_LABELS", "Evaluation", "Evaluator", "make_evaluator"]

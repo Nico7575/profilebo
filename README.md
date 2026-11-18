@@ -12,8 +12,9 @@ core is application-agnostic: any simulator that maps design parameters to a
 trajectory with statistical uncertainties can be plugged in.
 
 > **Status (November 2026): work in progress.** The optimization pipeline,
-> the Serpent evaluator and `profilebo run` are complete and tested; a
-> monitoring script is planned. See [Status](#status).
+> the Serpent evaluator, `profilebo run` and `profilebo report` are complete
+> and tested; optimization on the surrogate alone is planned. See
+> [Status](#status).
 
 ## How it works
 
@@ -61,7 +62,7 @@ source .venv/bin/activate       # activate it (repeat in every new terminal)
 # A plain install on Linux pulls the much larger CUDA build.
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-pip install -e ".[dev]"
+pip install -e ".[dev,plots]"
 ```
 
 The last line installs profilebo and everything it depends on, as listed in
@@ -70,9 +71,10 @@ The last line installs profilebo and everything it depends on, as listed in
 - `.` means "the package in this folder".
 - `-e` (editable) links the installation to this folder instead of copying
   it, so changes you make to the code take effect without reinstalling. If you
-  only want to use the package, `pip install ".[dev]"` works too.
-- `[dev]` adds the optional extras for development, here `pytest` to run the
-  tests. `[plots]` adds `matplotlib`; extras combine as `".[dev,plots]"`.
+  only want to use the package, `pip install ".[dev,plots]"` works too.
+- `[dev,plots]` adds two optional extras: `dev` brings `pytest` to run the
+  tests, `plots` brings `matplotlib` for `profilebo report`. Without them,
+  `pip install -e .` installs the optimizer alone.
 - The quotes stop some shells (zsh, for instance) from interpreting the
   square brackets.
 
@@ -113,7 +115,14 @@ profilebo run examples/synthetic.yaml
 ```
 
 It takes a few minutes and ends close to the known answer, printing the best
-design and its objective `J`.
+design and its objective `J`. Then look at the campaign:
+
+```bash
+profilebo report examples/synthetic.yaml
+```
+
+This prints a summary and writes it, with the figures described in
+[The report](#the-report), to `examples/runs/synthetic/report/`.
 
 The campaign writes everything to `paths.run_dir` (relative to the config
 file, here `examples/runs/synthetic/`):
@@ -125,6 +134,7 @@ file, here `examples/runs/synthetic/`):
 | `iterations.jsonl` | one line per optimization step: design, acquisition value, objective, stopping state |
 | `cases/<tag>/` | the simulator's working directory for each evaluation |
 | `campaign.log` | the log of every run of the campaign |
+| `report/` | the output of `profilebo report` |
 
 A campaign is resumable: stop it with `Ctrl-C` at any time, and running the
 same command again continues where it stopped. With `bo.reproducible: true` it is also deterministic, so
@@ -165,11 +175,33 @@ If a job fails at once with `error while loading shared libraries`, the job
 cannot find the MPI library `sss2` was built with: load its module through
 `serpent.slurm.modules` (`ldd $(which sss2)` lists what is missing).
 
+## The report
+
+`profilebo report config.yaml` only reads the run directory, so it can run at
+any time, also while the campaign is running. It prints a summary (how far the
+campaign is, why it stopped, the best design and its `J` with the statistical
+error, which designs are a statistical tie with it, the parameters on a bound)
+and writes it to `report/summary.txt`, with these figures:
+
+| Figure | What it shows | What to look for |
+|---|---|---|
+| `trajectories` | the best trajectory with its 2-sigma band, the target, the other evaluations in grey | the best design follows the target inside the window (the shaded parts are outside it) |
+| `convergence` | `J` of every evaluation, and the best so far | the optimization steps cluster low; a flat staircase means diminishing returns |
+| `acquisition` | the improvement the surrogate still expects at every step, against the statistical error of `J` | when the expected improvement falls to the noise level, more steps cannot be told apart from the best |
+| `parameters` | every evaluated design, parameter by parameter, with the bounds | the best design (star) or the late steps sitting on a bound: the optimum may lie outside the design box |
+| `contributions` | where the best design's `J` comes from, point by point | with a large `alpha`, a small dip below the target can dominate `J` |
+| `ranking` | the best evaluations with their statistical error bars | overlapping bars are designs that cannot be told apart |
+
+`--gif` adds `convergence.gif`, one frame per evaluation (the initial design
+from worst to best, then the optimization steps). `--show doe_004 bo_017`
+draws those evaluations in the trajectory figure as well, and `--format pdf`
+writes the figures as PDF.
+
 ## Command summary
 
 | Task | Command |
 |---|---|
-| Install (in the cloned folder) | `pip install -e ".[dev]"` or `conda env create -f environment.yml` |
+| Install (in the cloned folder) | `pip install -e ".[dev,plots]"` or `conda env create -f environment.yml` |
 | Activate the environment | `source .venv/bin/activate` or `conda activate profilebo` |
 | Check the installation | `pytest -m "not slow"` |
 | Run all tests | `pytest` |
@@ -179,7 +211,9 @@ cannot find the MPI library `sss2` was built with: load its module through
 | Start it over | delete its `run_dir`, then `profilebo run config.yaml` |
 | Scalar-objective baseline | `profilebo run config.yaml --scalar` (with its own `run_dir`) |
 | More detail in the log | `profilebo run config.yaml -v` |
-| Help | `profilebo --help`, `profilebo run --help` |
+| Summary and figures (any time) | `profilebo report config.yaml` |
+| ... with an animation, some evaluations highlighted, as PDF | `profilebo report config.yaml --gif --show doe_004 bo_017 --format pdf` |
+| Help | `profilebo --help`, `profilebo run --help`, `profilebo report --help` |
 
 On a cluster, keep the optimizer alive after you log out, and follow the jobs
 with the scheduler:
@@ -193,6 +227,7 @@ sbatch optimizer.sbatch                   # stop: scancel <its job id>
 
 squeue --me                               # the jobs: pbo_optimizer, pbo_<tag>
 tail -f runs/<name>/campaign.log          # the optimizer's log
+profilebo report config.yaml              # where the campaign stands, with figures
 ```
 
 From Python, the same campaign is:
@@ -251,7 +286,8 @@ resumable), and be safe to call from several threads. The full contract is in
 | Synthetic evaluator and example | done |
 | Serpent evaluator | ported and checked against the original code: identical inputs for any number of particle batches, identical particle positions for a fixed seed, identical results on 550 Serpent outputs of the paper's campaigns, identical SLURM job scripts, and the same decisions on restart and failure (reuse, re-attach, retry, refuse). Run end to end on a SLURM cluster (DelftBlue): stopped and resumed mid-design, re-attached to the running jobs, and the archive rebuilt identically from the Serpent outputs. New: a local backend for running without a cluster |
 | Command line: `profilebo run` (run, stop, resume; scalar baseline) | done |
-| Monitoring script, optimization on the surrogate alone | planned |
+| Report: `profilebo report` (summary and figures, also of a running campaign) | done |
+| Optimization on the surrogate alone | planned |
 
 `examples/templates/single_assembly_blueprint.inp` is a **placeholder** Serpent
 model: a single fuel block with periodic boundaries, provided so that the

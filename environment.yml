@@ -9,4 +9,4 @@ dependencies:
   - pip
   - pip:
       - --extra-index-url https://download.pytorch.org/whl/cpu   # CPU-only PyTorch
-      - -e .[dev]
+      - -e .[dev,plots]
