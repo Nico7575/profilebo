@@ -43,23 +43,38 @@ serpent:
   disperser:
     shake_factor: 0.4
     growth_rate: 0.01
+
+  # Where Serpent runs: slurm (a cluster) or local (this machine). Only the
+  # section of the chosen scheduler is used.
+  scheduler: slurm
   slurm:
-    partition: partition   
-    ntasks: 8
+    partition: partition             # unset partition/account/time/mem_per_cpu
+    account: account                 # are left to the cluster defaults
+    ntasks: 8                        # MPI ranks
     cpus_per_task: 4
     mem_per_cpu: 6000M
     omp_threads: null                # set only after a hybrid recompile of sss2
-    time: "07:00:00"                 
-    account: account   
-    modules: []                      # OpenMPI resolves via RPATH; none needed
+    time: "07:00:00"
+    modules: []                      # loaded in order in the job script, e.g. the
+                                     # MPI that sss2 was built with; check with
+                                     # ldd on the executable ("not found" lines)
     env_lines:                       # exported inside the job script
       - export SERPENT_DATA=/DATA
       - export SERPENT_ACELIB=xsdir.xsdata
     launcher: srun                   # fallback: mpirun -np $SLURM_NTASKS
     extra_lines: []                  # any additional #SBATCH directives
-
     poll_seconds: 60
     max_attempts: 3                  # retry transient SLURM/node faults
+  local:                             # each case runs in the background; it keeps
+                                     # running if the optimizer is interrupted,
+                                     # and a restart picks it up again
+    launcher: mpirun -np 4           # put in front of sss2; empty for no MPI
+    omp_threads: null                # OpenMP threads (sss2 -omp)
+    env_lines:
+      - export SERPENT_DATA=/DATA
+      - export SERPENT_ACELIB=xsdir.xsdata
+    poll_seconds: 10
+    max_attempts: 1                  # a local failure is rarely transient
 
 # Trajectory reduction: each simulated trajectory -> n_coeff POD coefficients.
 # The number of modes is chosen after the DoE: the fewest whose truncation
@@ -80,7 +95,8 @@ objective:
 
 bo:
   n_init: 16                         # LHS design size
-  doe_parallel: 2                    # concurrent DoE jobs
+  doe_parallel: 2                    # concurrent DoE jobs (local: mind the cores,
+                                     # doe_parallel x MPI ranks x OpenMP threads)
   budget: 45                         # fresh campaign: 16 DoE + 24 BO
   seed: 42
   reproducible: true       

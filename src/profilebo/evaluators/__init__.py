@@ -7,7 +7,8 @@ def make_evaluator(cfg) -> Evaluator:
         from profilebo.evaluators.synthetic import SyntheticEvaluator
         return SyntheticEvaluator(cfg.synthetic)
     if cfg.evaluator == "serpent":
-        raise NotImplementedError("the Serpent evaluator is not ported yet (step 5)")
+        from profilebo.evaluators.serpent.evaluator import SerpentEvaluator
+        return SerpentEvaluator(cfg.serpent)
     raise ValueError(f"unknown evaluator {cfg.evaluator!r}")
 
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -89,15 +90,21 @@ class BOLoop:
             self.basis = TrajectoryBasis.load(self._basis_file)
 
     def _checkpoint(self) -> None:
-        np.savez(
-            self._history_file,
-            t=self.t,
-            X=np.array(self.X),
-            y=np.array(self.y),
-            y_std=np.array(self.y_std),
-            tags=np.array(self.tags),
-            names=np.array(self.cfg.parameter_names),
-        )
+        # Write a temporary file and rename it over the archive: a rename is
+        # atomic, so a campaign killed mid-write keeps its previous archive
+        # instead of a truncated one.
+        tmp = self._history_file.with_name(self._history_file.name + ".tmp")
+        with open(tmp, "wb") as f:
+            np.savez(
+                f,
+                t=self.t,
+                X=np.array(self.X),
+                y=np.array(self.y),
+                y_std=np.array(self.y_std),
+                tags=np.array(self.tags),
+                names=np.array(self.cfg.parameter_names),
+            )
+        os.replace(tmp, self._history_file)
 
     # ------------------------------------------------------------------
     # evaluation bookkeeping

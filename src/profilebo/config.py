@@ -146,6 +146,8 @@ def _parameters(evaluator: str, section: dict) -> list[Parameter]:
     Further evaluators plug in here (and in evaluators.make_evaluator)."""
     if evaluator == "serpent":
         from profilebo.evaluators.serpent.batches import batch_parameters, parse_batches
+        from profilebo.evaluators.serpent.evaluator import check_section
+        check_section(section)
         return batch_parameters(parse_batches(section))
     from profilebo.evaluators.synthetic import parse_parameters
     return parse_parameters(section)

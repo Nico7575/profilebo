@@ -1,0 +1,12 @@
+# Conda environment for profilebo:  conda env create -f environment.yml
+# The package dependencies are listed only in pyproject.toml; this file sets
+# up Python and installs the package from this folder with pip.
+name: profilebo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cpu   # CPU-only PyTorch
+      - -e .[dev]
